@@ -47,9 +47,28 @@ public class SecurityConfig {
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .csrf(AbstractHttpConfigurer::disable)
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .exceptionHandling(ex -> ex
+                .authenticationEntryPoint((request, response, authException) -> {
+                    response.setContentType("application/json;charset=UTF-8");
+                    response.setStatus(jakarta.servlet.http.HttpServletResponse.SC_UNAUTHORIZED);
+                    response.getWriter().write("{\"status\": 401, \"error\": \"Unauthorized\", \"message\": \"Vui lòng đăng nhập (Thiếu hoặc Token không hợp lệ)!\"}");
+                })
+                .accessDeniedHandler((request, response, accessDeniedException) -> {
+                    response.setContentType("application/json;charset=UTF-8");
+                    response.setStatus(jakarta.servlet.http.HttpServletResponse.SC_FORBIDDEN);
+                    response.getWriter().write("{\"status\": 403, \"error\": \"Forbidden\", \"message\": \"Bạn không có quyền thực hiện thao tác này! Cần tài khoản ROLE_INSTRUCTOR hoặc ROLE_ADMIN.\"}");
+                })
+            )
             .authorizeHttpRequests(auth -> auth
-                // Mở quyền toàn bộ cho auth và trang báo lỗi mặc định của Spring
-                .requestMatchers("/api/v1/auth/**", "/error").permitAll()
+                .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
+                .requestMatchers(
+                    "/api/v1/auth/**",
+                    "/api/v1/categories/**",
+                    "/api/v1/courses/public/**",
+                    "/api/v1/sections/course/**",
+                    "/api/v1/lessons/section/**",
+                    "/error"
+                ).permitAll()
                 .anyRequest().authenticated()
             );
 
